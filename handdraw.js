@@ -64,8 +64,6 @@ function init()
     // when finger release
     canvas.addEventListener("touchend", touchendHandler,false);
 
-
-
 }
 
 function getDivPixelFromLatLng(latLng_position)
@@ -123,11 +121,30 @@ function touchmoveHandler(event)
 
 function touchendHandler(event)
 {
-    alert(total_stroke_list[0]);
-    lat_lng = getLatLngFromDivPixel(total_stroke_list[0]);
-    alert(lat_lng);
-    div_pixel = getDivPixelFromLatLng(lat_lng);
-    alert(div_pixel);
+    lat_lng_list = new Array()
+    for(var i=0;i<total_stroke_list.length;i++)
+    {
+        point = total_stroke_list[i];
+        lat_lng = getLatLngFromDivPixel(point);
+        lat_lng_list.push(lat_lng)
+    }
+
+    for(var i=0;i<lat_lng_list.length;i++)
+    {
+        lat_lng_point = lat_lng_list[i]
+        drawMarker(lat_lng_point);
+    }
+    
+}
+
+function drawMarker(marker_lat_lng)
+{
+    marker = new google.maps.Marker({
+        map:map,
+        draggable:false,
+        animation: google.maps.Animation.DROP,
+        position: marker_lat_lng
+    });
 }
 
 function touchcancelHandler(event)
