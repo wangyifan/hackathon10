@@ -11,8 +11,6 @@ document.addEventListener("DOMContentLoaded", init, false);
 var ctx; // Our canvas context
 var total_stroke = 0;
 var map;
-var projection;
-var overlay;
 
 function init()
 {
@@ -25,37 +23,6 @@ function init()
         };
         map = new google.maps.Map(document.getElementById('map_canvas'),
             mapOptions);
-
-        //setup projection
-        google.maps.event.addListener(map, 'projection_changed', function() {
-            overlay = new google.maps.OverlayView();
-            overlay.draw = function() {};
-            overlay.setMap(map);
-            projection = overlay.getProjection()
-            //.fromDivPixelToLatLng(latLng); 
-            alert(projection);
-            point = new google.maps.Point(0,0)
-            lat_lng = projection.fromPointToLatLng(point);
-            //alert(lat_lng)
-        });
-
-        function convertPoint(latLng) {
-            var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
-            var pow = Math.pow(2, map.getZoom());
-            return new google.maps.Point(worldPoint.x*pow, worldPoint.y*pow);
-        }
-
-        var origin;
-        function calculateOrigin() {
-            var bounds = map.getBounds();
-            origin = convertPoint(
-                new google.maps.LatLng(bounds.getNorthEast().lat(),
-                bounds.getSouthWest().lng())
-            );
-        }
-
-        google.maps.event.addListener(map, 'zoom_changed', calculateOrigin);
-        google.maps.event.addListenerOnce(map, 'bounds_changed', calculateOrigin);
 
     }
 
@@ -96,6 +63,35 @@ function init()
     // when finger release
     canvas.addEventListener("touchend", touchendHandler,false);
 
+}
+
+function getDivPixelFromLatLng(latLng_position)
+{
+    var scale = Math.pow(2, map.getZoom());
+    var nw = new google.maps.LatLng(map.getBounds().getNorthEast().lat(),map.getBounds().getSouthWest().lng());
+    var worldCoordinateNW = map.getProjection().fromLatLngToPoint(nw);
+
+    var worldCoordinate = map.getProjection().fromLatLngToPoint(latLng_position);
+    var pixelOffset = new google.maps.Point(
+        Math.floor((worldCoordinate.x - worldCoordinateNW.x) * scale),
+        Math.floor((worldCoordinate.y - worldCoordinateNW.y) * scale)
+        );
+    return pixelOffset;
+}
+
+function getLatLngFromDivPixel(div_pixel)
+{
+    var scale = Math.pow(2, map.getZoom());
+    var nw = new google.maps.LatLng(map.getBounds().getNorthEast().lat(),map.getBounds().getSouthWest().lng());
+    var worldCoordinateNW = map.getProjection().fromLatLngToPoint(nw);
+
+    var worldCoordinate = new google.maps.Point(
+            div_pixel/scale + worldCoordinateNW.x,
+            div_pixel/scale + worldCoordinateNW.y
+        )
+
+    var lat_lng = map.getProjection().fromPointToLatLng(worldCoordinate);
+    return lat_lng;
 }
 
 function touchstartHandler(event)
