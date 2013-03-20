@@ -9,7 +9,8 @@ in an HTML 5 canvas element.
 document.addEventListener("DOMContentLoaded", init, false);
 
 var ctx; // Our canvas context
-var total_stroke = 0;
+var total_stroke_count = 0;
+var total_stroke_list = new Array();
 var map;
 
 function init()
@@ -63,6 +64,8 @@ function init()
     // when finger release
     canvas.addEventListener("touchend", touchendHandler,false);
 
+
+
 }
 
 function getDivPixelFromLatLng(latLng_position)
@@ -79,6 +82,7 @@ function getDivPixelFromLatLng(latLng_position)
     return pixelOffset;
 }
 
+// a div_pixel is like [222,333]
 function getLatLngFromDivPixel(div_pixel)
 {
     var scale = Math.pow(2, map.getZoom());
@@ -86,8 +90,8 @@ function getLatLngFromDivPixel(div_pixel)
     var worldCoordinateNW = map.getProjection().fromLatLngToPoint(nw);
 
     var worldCoordinate = new google.maps.Point(
-            div_pixel/scale + worldCoordinateNW.x,
-            div_pixel/scale + worldCoordinateNW.y
+            div_pixel[0]/scale + worldCoordinateNW.x,
+            div_pixel[1]/scale + worldCoordinateNW.y
         )
 
     var lat_lng = map.getProjection().fromPointToLatLng(worldCoordinate);
@@ -102,20 +106,28 @@ function touchstartHandler(event)
 	}
 	// Move the drawing pointer to where the finger is placed
     ctx.moveTo(event.touches[0].pageX, event.touches[0].pageY);
+    var div_pixel_point = [event.touches[0].pageX, event.touches[0].pageY];
+    total_stroke_list.push(div_pixel_point);
 }
 
 function touchmoveHandler(event)
 {
 	// Draw a line from the last position to where the finger is now
     ctx.lineTo(event.touches[0].pageX, event.touches[0].pageY);
+    var div_pixel_point = [event.touches[0].pageX, event.touches[0].pageY];
+    total_stroke_list.push(div_pixel_point);
     // Render the stroke
     ctx.stroke();
-    total_stroke = total_stroke + 1
+    total_stroke_count = total_stroke_count + 1
 }
 
 function touchendHandler(event)
 {
-   alert(total_stroke)
+    alert(total_stroke_list[0]);
+    lat_lng = getLatLngFromDivPixel(total_stroke_list[0]);
+    alert(lat_lng);
+    div_pixel = getDivPixelFromLatLng(lat_lng);
+    alert(div_pixel);
 }
 
 function touchcancelHandler(event)
