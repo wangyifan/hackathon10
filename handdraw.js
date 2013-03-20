@@ -32,16 +32,31 @@ function init()
             overlay.draw = function() {};
             overlay.setMap(map);
             projection = overlay.getProjection()
-
-
             //.fromDivPixelToLatLng(latLng); 
-
-
             alert(projection);
             point = new google.maps.Point(0,0)
             lat_lng = projection.fromPointToLatLng(point);
-            alert(lat_lng)
+            //alert(lat_lng)
         });
+
+        function convertPoint(latLng) {
+            var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
+            var pow = Math.pow(2, map.getZoom());
+            return new google.maps.Point(worldPoint.x*pow, worldPoint.y*pow);
+        }
+
+        var origin;
+        function calculateOrigin() {
+            var bounds = map.getBounds();
+            origin = convertPoint(
+                new google.maps.LatLng(bounds.getNorthEast().lat(),
+                bounds.getSouthWest().lng())
+            );
+        }
+
+        google.maps.event.addListener(map, 'zoom_changed', calculateOrigin);
+        google.maps.event.addListenerOnce(map, 'bounds_changed', calculateOrigin);
+
     }
 
     google.maps.event.addDomListener(window, 'load', initialize);

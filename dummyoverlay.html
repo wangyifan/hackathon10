@@ -37,8 +37,8 @@ File Edit Options Buffers Tools HTML SGML Help
       var bounds = map.getBounds();
       origin = convertPoint(
         new google.maps.LatLng(bounds.getNorthEast().lat(),
-                               bounds.getSouthWest().lng())
-      );
+         bounds.getSouthWest().lng())
+        );
     }
 
     google.maps.event.addListener(map, 'zoom_changed', calculateOrigin);
@@ -51,7 +51,7 @@ File Edit Options Buffers Tools HTML SGML Help
         var pixelWorldPoint = convertPoint(event.latLng);
 
         var relativePoint = new google.maps.Point(pixelWorldPoint.x - origin.x,
-                                                  pixelWorldPoint.y - origin.y);
+          pixelWorldPoint.y - origin.y);
 
         var divPoint = overlay.getProjection().fromLatLngToDivPixel(event.latLng);
 
