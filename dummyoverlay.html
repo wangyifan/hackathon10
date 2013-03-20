@@ -1,0 +1,69 @@
+File Edit Options Buffers Tools HTML SGML Help                                                                                                                         
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+<title>Google Maps JavaScript API v3 Example: Map Simple</title>
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+<script type="text/javascript">
+
+  function dummyOverlay() {
+  }
+
+  dummyOverlay.prototype = new google.maps.OverlayView();
+  dummyOverlay.prototype.onAdd =
+  dummyOverlay.prototype.draw =
+  dummyOverlay.prototype.onRemove = function() {
+  }
+
+  var map;
+  function initialize() {
+    var myLatlng = new google.maps.LatLng(-34.397, 150.644);
+    var myOptions = {
+      zoom: 8,
+      center: myLatlng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    }
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+    function convertPoint(latLng) {
+      var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
+      var pow = Math.pow(2, map.getZoom());
+      return new google.maps.Point(worldPoint.x*pow, worldPoint.y*pow);
+    }
+
+    var origin;
+    function calculateOrigin() {
+      var bounds = map.getBounds();
+      origin = convertPoint(
+        new google.maps.LatLng(bounds.getNorthEast().lat(),
+                               bounds.getSouthWest().lng())
+      );
+    }
+
+    google.maps.event.addListener(map, 'zoom_changed', calculateOrigin);
+    google.maps.event.addListenerOnce(map, 'bounds_changed', calculateOrigin);
+
+    var overlay = new dummyOverlay();
+    overlay.onAdd = function() {
+      google.maps.event.addListener(map, 'click', function(event) {
+
+        var pixelWorldPoint = convertPoint(event.latLng);
+
+        var relativePoint = new google.maps.Point(pixelWorldPoint.x - origin.x,
+                                                  pixelWorldPoint.y - origin.y);
+
+        var divPoint = overlay.getProjection().fromLatLngToDivPixel(event.latLng);
+
+        alert(divPoint.toString() + " " + relativePoint.toString());
+      });
+    }
+    overlay.setMap(map);
+  }
+
+</script>
+</head>
+<body style="margin:0px; padding:0px;" onload="initialize()">
+  <div id="map_canvas" style="width:100%; height:100%"></div>
+</body>
+</html>
