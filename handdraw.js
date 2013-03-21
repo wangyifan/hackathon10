@@ -12,6 +12,7 @@ var ctx; // Our canvas context
 var total_stroke_count = 0;
 var total_stroke_list = new Array();
 var map;
+var all_markers = new Array();
 
 function init()
 {
@@ -103,16 +104,16 @@ function touchstartHandler(event)
 		document.body.removeChild(document.getElementsByTagName('section')[0]);
 	}
 	// Move the drawing pointer to where the finger is placed
-    ctx.moveTo(event.touches[0].pageX, event.touches[0].pageY);
-    var div_pixel_point = [event.touches[0].pageX, event.touches[0].pageY];
+    ctx.moveTo(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
+    var div_pixel_point = [event.touches[0].pageX, event.changedTouches[0].pageY];
     total_stroke_list.push(div_pixel_point);
 }
 
 function touchmoveHandler(event)
 {
 	// Draw a line from the last position to where the finger is now
-    ctx.lineTo(event.touches[0].pageX, event.touches[0].pageY);
-    var div_pixel_point = [event.touches[0].pageX, event.touches[0].pageY];
+    ctx.lineTo(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
+    var div_pixel_point = [event.changedTouches[0].pageX, event.changedTouches[0].pageY];
     total_stroke_list.push(div_pixel_point);
     // Render the stroke
     ctx.stroke();
@@ -121,6 +122,8 @@ function touchmoveHandler(event)
 
 function touchendHandler(event)
 {
+    alert(event.touches.length);
+
     lat_lng_list = new Array()
     for(var i=0;i<total_stroke_list.length;i++)
     {
@@ -145,6 +148,8 @@ function drawMarker(marker_lat_lng)
         animation: google.maps.Animation.DROP,
         position: marker_lat_lng
     });
+
+    all_markers.push(marker);
 }
 
 function touchcancelHandler(event)
@@ -157,6 +162,62 @@ function preventScrollingHandler(event)
 {
 	/* Flags this event as handled. Prevents the UA from handling it at window level */
     event.preventDefault();
+}
+
+function switchToMoveMode()
+{
+    //show map, hide touch canvas
+    var touch_canvas = document.getElementById("touch_canvas");
+    touch_canvas.style.zIndex = 0;
+    var map_canvas = document.getElementById("map_canvas")
+    map_canvas.style.zIndex = 10;
+
+    clearTheMap();
+}
+
+function switchToDrawMode()
+{
+    var touch_canvas = document.getElementById("touch_canvas");
+    var map_canvas = document.getElementById("map_canvas")
+
+    //clear canvas and stroke
+    ctx = touch_canvas.getContext("2d");
+    ctx.clearRect(0, 0, touch_canvas.width, touch_canvas.height);
+    total_stroke_list = new Array();
+
+    //show touch, hide map canvas
+    touch_canvas.style.zIndex = 10;
+    map_canvas.style.zIndex = 0;
+}
+
+function clearTheMap()
+{
+    var touch_canvas = document.getElementById("touch_canvas");
+    ctx.clearRect(0, 0, touch_canvas.width, touch_canvas.height);
+
+    for(var i=0;i<all_markers.length;i++)
+    {
+        all_markers[i].setMap(null);
+    }
+
+    all_markers = new Array();
+}
+
+function draw_or_move()
+{
+    button = document.getElementById("draw_or_move");
+    alert(button.textContent);
+    current_status = button.textContent;
+    if(current_status == "Move")
+    {
+        switchToMoveMode();
+        button.textContent = "Draw";
+    }
+    else
+    {
+        switchToDrawMode();
+        button.textContent = "Move";
+    }
 }
 
 
