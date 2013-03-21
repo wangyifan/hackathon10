@@ -122,8 +122,6 @@ function touchmoveHandler(event)
 
 function touchendHandler(event)
 {
-    alert(event.touches.length);
-
     lat_lng_list = new Array()
     for(var i=0;i<total_stroke_list.length;i++)
     {
@@ -167,11 +165,11 @@ function preventScrollingHandler(event)
 function switchToMoveMode()
 {
     //show map, hide touch canvas
-    var touch_canvas = document.getElementById("touch_canvas");
+    /*var touch_canvas = document.getElementById("touch_canvas");
     touch_canvas.style.zIndex = 0;
     var map_canvas = document.getElementById("map_canvas")
     map_canvas.style.zIndex = 10;
-
+*/
     clearTheMap();
 }
 
@@ -181,7 +179,6 @@ function switchToDrawMode()
     var map_canvas = document.getElementById("map_canvas")
 
     //clear canvas and stroke
-    ctx = touch_canvas.getContext("2d");
     ctx.clearRect(0, 0, touch_canvas.width, touch_canvas.height);
     total_stroke_list = new Array();
 
@@ -206,7 +203,6 @@ function clearTheMap()
 function draw_or_move()
 {
     button = document.getElementById("draw_or_move");
-    alert(button.textContent);
     current_status = button.textContent;
     if(current_status == "Move")
     {
