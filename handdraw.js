@@ -13,6 +13,22 @@ var total_stroke_count = 0;
 var total_stroke_list = new Array();
 var map;
 var all_markers = new Array();
+var polylines_drawn_by_map;
+
+var auth = { 
+  //
+  // Update with your auth tokens.
+  //
+  consumerKey: "1SO7ZFtiYTrBokcBStrFcA", 
+  consumerSecret: "DyMvVB3U0mSBY3sPmStpa-kg4_Y",
+  accessToken: "TU6dLFH_tjp8jRaG2cG9q7ydS2v1yHzQ",
+  // This example is a proof of concept, for how to use the Yelp v2 API with javascript.
+  // You wouldn't actually want to expose your access token secret like this in a real application.
+  accessTokenSecret: "gb9g6oOyEUkSkahi8DjVFUDOsPE",
+  serviceProvider: { 
+    signatureMethod: "HMAC-SHA1"
+  }
+};
 
 function init()
 {
@@ -65,6 +81,69 @@ function init()
     // when finger release
     canvas.addEventListener("touchend", touchendHandler,false);
 
+}
+
+function on_search()
+{
+    clearTheMap();
+    map_bounds = map.getBounds()
+    sw = map_bounds.getSouthWest();
+    ne = map_bounds.getNorthEast();
+
+    str_bounds = String(sw.lat())+','+String(sw.lng())+'|'+String(ne.lat())+','+String(ne.lng());
+    search_polygon('sushi', str_bounds, null);
+}
+
+function search_polygon(terms, bounds, polygon)
+{
+
+    var accessor = {
+        consumerSecret: auth.consumerSecret,
+        tokenSecret: auth.accessTokenSecret
+        };
+
+    parameters = [];
+    parameters.push(['term', terms]);
+    parameters.push(['bounds', bounds]);
+    parameters.push(['callback', 'cb']);
+    parameters.push(['oauth_consumer_key', auth.consumerKey]);
+    parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
+    parameters.push(['oauth_token', auth.accessToken]);
+    parameters.push(['oauth_signature_method', 'HMAC-SHA1']);
+
+    var message = { 
+        'action': 'http://api.yifan.dev.yelp.com/v2/search',
+        'method': 'GET',
+        'parameters': parameters 
+    };
+
+    OAuth.setTimestampAndNonce(message);
+    OAuth.SignatureMethod.sign(message, accessor);
+
+    var parameterMap = OAuth.getParameterMap(message.parameters);
+    parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature)
+
+    $('#loadingDiv').show();
+    $.ajax({
+        'url': message.action,
+        'async': true,
+        'data': parameterMap,
+        'cache': true,
+        'dataType': 'jsonp',
+        'jsonpCallback': 'cb',
+        'success': function(data, textStats, XMLHttpRequest) {
+            $('#loadingDiv').hide();
+            biz_lat_lng_list = new Array();
+            for(var i=0;i<data.businesses.length;i++)
+            {
+                biz = data.businesses[i];
+                //alert(biz.name+' '+biz.image_url+' '+biz.rating_img_url);
+                biz_lat_lng = new google.maps.LatLng(biz.location.coordinate.latitude, biz.location.coordinate.longitude);
+                drawMarker(biz_lat_lng);
+                biz_lat_lng_list.push(biz_lat_lng);
+            }
+        }
+    });
 }
 
 function getDivPixelFromLatLng(latLng_position)
@@ -122,6 +201,8 @@ function touchmoveHandler(event)
 
 function touchendHandler(event)
 {
+    on_search();
+
     lat_lng_list = new Array()
     for(var i=0;i<total_stroke_list.length;i++)
     {
@@ -130,16 +211,12 @@ function touchendHandler(event)
         lat_lng_list.push(lat_lng)
     }
 
-    for(var i=0;i<lat_lng_list.length;i++)
-    {
-        lat_lng_point = lat_lng_list[i]
-        drawMarker(lat_lng_point);
-    }
-    
+    drawMapPolyline(lat_lng_list);
 }
 
 function drawMarker(marker_lat_lng)
 {
+    //alert(marker_lat_lng);
     marker = new google.maps.Marker({
         map:map,
         draggable:false,
@@ -148,6 +225,28 @@ function drawMarker(marker_lat_lng)
     });
 
     all_markers.push(marker);
+}
+
+function drawMapPolyline(lat_lng_list)
+{
+    var lineSymbol = {
+    path: 'M 0,-1 0,1',
+    strokeOpacity: 1,
+    scale: 4
+    };
+    //alert(lat_lng_list);
+    polylines_drawn_by_map = new google.maps.Polyline({
+            path: lat_lng_list,
+            strokeOpacity: 0,
+            icons: [{
+                icon: lineSymbol,
+                offset: '0',
+                repeat: '20px'
+            }],
+            map: map
+        });
+
+    polylines_drawn_by_map.setMap(map);
 }
 
 function touchcancelHandler(event)
@@ -198,6 +297,11 @@ function clearTheMap()
     }
 
     all_markers = new Array();
+
+    if(polylines_drawn_by_map)
+    {
+        polylines_drawn_by_map.setPath(new Array());
+    }
 }
 
 function draw_or_move()
