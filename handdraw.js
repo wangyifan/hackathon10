@@ -83,18 +83,24 @@ function init()
 
 }
 
+function clearTouches()
+{
+
+}
+
 function on_search(lat_lng_list)
 {
     var search_query = $("#search_box").val();
     if (!(search_query && search_query.length>0))
     {
+        alert("No search query found.")
+        clearTheMap();
         return;
     }
 
     var sw;
     var ne;
     var str_lat_lng_list;
-
     if(lat_lng_list && lat_lng_list.length>0)
     {
         var n=-1000;
@@ -218,6 +224,8 @@ function touchstartHandler(event)
 		document.body.removeChild(document.getElementsByTagName('section')[0]);
 	}
 	// Move the drawing pointer to where the finger is placed
+    total_stroke_list = new Array();
+    ctx.beginPath();
     ctx.moveTo(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
     var div_pixel_point = [event.touches[0].pageX, event.changedTouches[0].pageY];
     total_stroke_list.push(div_pixel_point);
@@ -243,7 +251,27 @@ function touchendHandler(event)
         lat_lng = getLatLngFromDivPixel(point);
         lat_lng_list.push(lat_lng)
     }
+
     on_search(lat_lng_list);
+}
+
+function clearTheMap()
+{
+    var touch_canvas = document.getElementById("touch_canvas");
+    ctx.clearRect(0, 0, touch_canvas.width, touch_canvas.height);
+    ctx.restore();
+
+    for(var i=0;i<all_markers.length;i++)
+    {
+        all_markers[i].setMap(null);
+    }
+
+    all_markers = new Array();
+
+    if(polylines_drawn_by_map)
+    {
+        polylines_drawn_by_map.setPath(new Array());
+    }
 }
 
 function drawMarker(marker_lat_lng)
@@ -318,23 +346,6 @@ function switchToDrawMode()
     map_canvas.style.zIndex = 0;
 }
 
-function clearTheMap()
-{
-    var touch_canvas = document.getElementById("touch_canvas");
-    ctx.clearRect(0, 0, touch_canvas.width, touch_canvas.height);
-
-    for(var i=0;i<all_markers.length;i++)
-    {
-        all_markers[i].setMap(null);
-    }
-
-    all_markers = new Array();
-
-    if(polylines_drawn_by_map)
-    {
-        polylines_drawn_by_map.setPath(new Array());
-    }
-}
 
 function draw_or_move()
 {
