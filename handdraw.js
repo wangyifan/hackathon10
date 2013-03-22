@@ -83,15 +83,60 @@ function init()
 
 }
 
-function on_search()
+function on_search(lat_lng_list)
 {
-    clearTheMap();
-    map_bounds = map.getBounds()
-    sw = map_bounds.getSouthWest();
-    ne = map_bounds.getNorthEast();
+    var sw;
+    var ne;
 
-    str_bounds = String(sw.lat())+','+String(sw.lng())+'|'+String(ne.lat())+','+String(ne.lng());
-    search_polygon('sushi', str_bounds, null);
+    if(lat_lng_list && lat_lng_list.length>0)
+    {
+        var n=-1000;
+        var s=1000;
+        var e=-1000;
+        var w=1000;
+        for(var i=0;i<lat_lng_list.length;i++)
+        {
+            if(lat_lng_list[i].lat() > n)
+            {
+                n=lat_lng_list[i].lat();
+            }
+
+            if(lat_lng_list[i].lat() < s)
+            {
+                s=lat_lng_list[i].lat();
+            }
+
+            if(lat_lng_list[i].lng() > e)
+            {
+                e=lat_lng_list[i].lng();
+            }
+
+            if(lat_lng_list[i].lng() < w)
+            {
+                w=lat_lng_list[i].lng();
+            }
+        }
+
+        sw = new google.maps.LatLng(s, w);
+        ne = new google.maps.LatLng(n, e);
+        lat_lng_list = "["+String(lat_lng_list)+"]";
+    }
+    else
+    {
+        map_bounds = map.getBounds();
+        sw = map_bounds.getSouthWest(); 
+        ne = map_bounds.getNorthEast();
+        lat_lng_list = "[]";
+    }
+    //alert(lat_lng_list.length)
+    clearTheMap();
+
+    //str_bounds = String(sw.lat())+','+String(sw.lng())+'|'+String(ne.lat())+','+String(ne.lng());
+    str_bounds ="&tl_long="+String(sw.lng())+"&tl_lat="+String(ne.lat());
+    str_bounds+="&br_long="+String(ne.lng())+"&br_lat="+String(sw.lat());
+
+    //alert(lat_lng_list);
+    search_polygon('sushi', str_bounds, lat_lng_list);
 }
 
 function search_polygon(terms, bounds, polygon)
@@ -102,48 +147,30 @@ function search_polygon(terms, bounds, polygon)
         tokenSecret: auth.accessTokenSecret
         };
 
-    parameters = [];
-    parameters.push(['term', terms]);
-    parameters.push(['bounds', bounds]);
-    parameters.push(['callback', 'cb']);
-    parameters.push(['oauth_consumer_key', auth.consumerKey]);
-    parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
-    parameters.push(['oauth_token', auth.accessToken]);
-    parameters.push(['oauth_signature_method', 'HMAC-SHA1']);
-
-    var message = { 
-        'action': 'http://api.yifan.dev.yelp.com/v2/search',
-        'method': 'GET',
-        'parameters': parameters 
-    };
-
-    OAuth.setTimestampAndNonce(message);
-    OAuth.SignatureMethod.sign(message, accessor);
-
-    var parameterMap = OAuth.getParameterMap(message.parameters);
-    parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature)
-
+    url = 'http://api.yifan.dev.yelp.com/search?terms='+terms+"&ywsid=O6gR4bOEampWArBU1zBq9w";
+    url+= "&device_type=x86_64&device=&app_version=3.0.0&device_id=location=san francisco";
+    url+=bounds;
+    url = encodeURI(url)
+    //alert('{"polygon":'+String(polygon)+'}');
     $('#loadingDiv').show();
     $.ajax({
-        'url': message.action,
-        'async': true,
-        'data': parameterMap,
-        'cache': true,
-        'dataType': 'jsonp',
-        'jsonpCallback': 'cb',
-        'success': function(data, textStats, XMLHttpRequest) {
+        type:'POST',
+        url:url,
+        crossDomain:true,
+        data: {'polygon': polygon},
+        dataType: 'json',
+        success: function(data, status, request) {
             $('#loadingDiv').hide();
             biz_lat_lng_list = new Array();
             for(var i=0;i<data.businesses.length;i++)
             {
                 biz = data.businesses[i];
                 //alert(biz.name+' '+biz.image_url+' '+biz.rating_img_url);
-                biz_lat_lng = new google.maps.LatLng(biz.location.coordinate.latitude, biz.location.coordinate.longitude);
+                biz_lat_lng = new google.maps.LatLng(biz.latitude, biz.longitude);
                 drawMarker(biz_lat_lng);
                 biz_lat_lng_list.push(biz_lat_lng);
             }
-        }
-    });
+        }});
 }
 
 function getDivPixelFromLatLng(latLng_position)
@@ -201,8 +228,6 @@ function touchmoveHandler(event)
 
 function touchendHandler(event)
 {
-    on_search();
-
     lat_lng_list = new Array()
     for(var i=0;i<total_stroke_list.length;i++)
     {
@@ -210,7 +235,7 @@ function touchendHandler(event)
         lat_lng = getLatLngFromDivPixel(point);
         lat_lng_list.push(lat_lng)
     }
-
+    on_search(lat_lng_list);
     drawMapPolyline(lat_lng_list);
 }
 
@@ -221,7 +246,7 @@ function drawMarker(marker_lat_lng)
         map:map,
         draggable:false,
         animation: google.maps.Animation.DROP,
-        position: marker_lat_lng
+        position: marker_lat_lng,
     });
 
     all_markers.push(marker);
