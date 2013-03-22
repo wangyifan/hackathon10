@@ -85,8 +85,15 @@ function init()
 
 function on_search(lat_lng_list)
 {
+    var search_query = $("#search_box").val();
+    if (!(search_query && search_query.length>0))
+    {
+        return;
+    }
+
     var sw;
     var ne;
+    var str_lat_lng_list;
 
     if(lat_lng_list && lat_lng_list.length>0)
     {
@@ -119,14 +126,14 @@ function on_search(lat_lng_list)
 
         sw = new google.maps.LatLng(s, w);
         ne = new google.maps.LatLng(n, e);
-        lat_lng_list = "["+String(lat_lng_list)+"]";
+        str_lat_lng_list = "["+String(lat_lng_list)+"]";
     }
     else
     {
         map_bounds = map.getBounds();
         sw = map_bounds.getSouthWest(); 
         ne = map_bounds.getNorthEast();
-        lat_lng_list = "[]";
+        str_lat_lng_list = "[]";
     }
     //alert(lat_lng_list.length)
     clearTheMap();
@@ -136,7 +143,8 @@ function on_search(lat_lng_list)
     str_bounds+="&br_long="+String(ne.lng())+"&br_lat="+String(sw.lat());
 
     //alert(lat_lng_list);
-    search_polygon('sushi', str_bounds, lat_lng_list);
+    drawMapPolyline(lat_lng_list);
+    search_polygon(search_query, str_bounds, str_lat_lng_list);
 }
 
 function search_polygon(terms, bounds, polygon)
@@ -236,7 +244,6 @@ function touchendHandler(event)
         lat_lng_list.push(lat_lng)
     }
     on_search(lat_lng_list);
-    drawMapPolyline(lat_lng_list);
 }
 
 function drawMarker(marker_lat_lng)
@@ -289,11 +296,11 @@ function preventScrollingHandler(event)
 function switchToMoveMode()
 {
     //show map, hide touch canvas
-    /*var touch_canvas = document.getElementById("touch_canvas");
+    var touch_canvas = document.getElementById("touch_canvas");
     touch_canvas.style.zIndex = 0;
     var map_canvas = document.getElementById("map_canvas")
     map_canvas.style.zIndex = 10;
-*/
+    
     clearTheMap();
 }
 
