@@ -83,11 +83,6 @@ function init()
 
 }
 
-function clearTouches()
-{
-
-}
-
 function on_search(lat_lng_list)
 {
     var search_query = $("#search_box").val();
@@ -184,7 +179,13 @@ function search_polygon(terms, bounds, polygon)
                 drawMarker(biz_lat_lng);
                 biz_lat_lng_list.push(biz_lat_lng);
             }
-        }});
+        },
+        error: function (xhr, ajaxOptions, thrownError) {
+            $('#loadingDiv').hide();
+            alert("Oops...can't get any result.")
+      }
+    }
+    );
 }
 
 function getDivPixelFromLatLng(latLng_position)
