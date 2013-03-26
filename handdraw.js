@@ -160,7 +160,6 @@ function search_polygon(terms, bounds, polygon)
     url+= "&device_type=x86_64&device=&app_version=3.0.0&device_id=location=san francisco";
     url+=bounds;
     url = encodeURI(url)
-    //alert('{"polygon":'+String(polygon)+'}');
     $('#loadingDiv').show();
     $.ajax({
         type:'POST',
