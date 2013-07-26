@@ -12,9 +12,11 @@ var ctx; // Our canvas context
 var total_stroke_count = 0;
 var total_stroke_list = new Array();
 var map;
+var geocoder;
 var all_markers = new Array();
 var polylines_drawn_by_map;
 
+/*
 var auth = { 
   //
   // Update with your auth tokens.
@@ -29,11 +31,68 @@ var auth = {
     signatureMethod: "HMAC-SHA1"
   }
 };
+*/
+
+function supports_html5_storage() {
+    try {
+	return 'localStorage' in window && window['localStorage'] !== null;
+    } catch (e) {
+	return false;
+    }
+}
+
+function is_segment_crossing(segment1, segment2){
+    s1 = [segment2[0].lat() - segment1[0][0], segment2[0].lng() - segment1[0][1]];
+    s2 = [segment2[1].lat() - segment1[0][0], segment2[1].lng() - segment1[0][1]];
+    s3 = [segment2[0].lat() - segment1[1][0], segment2[0].lng() - segment1[1][1]];
+    s4 = [segment2[1].lat() - segment1[1][0], segment2[1].lng() - segment1[1][1]];
+
+    area_s1_s2 = s1[0] * s2[1] - s1[1] * s2[0];
+    area_s3_s4 = s3[0] * s4[1] - s3[1] * s4[0];
+
+    alert([area_s1_s2, area_s3_s4]);
+    return area_s1_s2 * area_s3_s4 < 0.0
+}
+
+function is_location_in_polygon(location, list_of_points_of_polygon){
+    var point_infinate = [1000000, location[1]];
+    var count = 0;
+    for(var i=0;i<list_of_points_of_polygon.length;i++)
+    {
+	if(is_segment_crossing([location, point_infinate], [list_of_points_of_polygon[i], list_of_points_of_polygon[(i+1)%list_of_points_of_polygon.length]]))
+	{
+	    count = count + 1;
+	    alert([location, point_infinate]);
+	    alert([list_of_points_of_polygon[i], list_of_points_of_polygon[(i+1)%list_of_points_of_polygon.length]]);
+	}
+    }
+    return count%2==1
+}
+
+var auth = { 
+  //
+  // Update with your auth tokens.
+  //
+  consumerKey: "HVi5KiA6t048A827yy9d6g", 
+  consumerSecret: "yiAfOUyy5o_vwjMhjM3funghSaE",
+  accessToken: "rprHX0Tob6pXBQXhu8JBXWxgy5hj2NlR",
+  // This example is a proof of concept, for how to use the Yelp v2 API with javascript.
+  // You wouldn't actually want to expose your access token secret like this in a real application.
+  accessTokenSecret: "6M4h-5xOPsS1AR_h7c3HHWbbxRw",
+  serviceProvider: { 
+    signatureMethod: "HMAC-SHA1"
+  }
+};
 
 function init()
 {
 
     function initialize() {
+	if (!supports_html5_storage())
+	{
+	    alert("not support html5 storage");
+	}
+
         var mapOptions = {
             zoom: 15,
             center: new google.maps.LatLng(37.775, -122.4183),
@@ -41,6 +100,7 @@ function init()
         };
         map = new google.maps.Map(document.getElementById('map_canvas'),
             mapOptions);
+	geocoder = new google.maps.Geocoder();
 
     }
 
@@ -140,48 +200,105 @@ function on_search(lat_lng_list)
     clearTheMap();
 
     //str_bounds = String(sw.lat())+','+String(sw.lng())+'|'+String(ne.lat())+','+String(ne.lng());
-    str_bounds ="&tl_long="+String(sw.lng())+"&tl_lat="+String(ne.lat());
-    str_bounds+="&br_long="+String(ne.lng())+"&br_lat="+String(sw.lat());
+    //str_bounds ="&tl_long="+String(sw.lng())+"&tl_lat="+String(ne.lat());
+    //str_bounds+="&br_long="+String(ne.lng())+"&br_lat="+String(sw.lat());
+
+    //sw_latitude,sw_longitude|ne_latitude,ne_longitude, v2 search
+    str_bounds = String(sw.lat()) + ',' + String(sw.lng()) + '|' + String(ne.lat()) + ',' + String(ne.lng());
 
     //alert(lat_lng_list);
-    drawMapPolyline(lat_lng_list);
-    search_polygon(search_query, str_bounds, str_lat_lng_list);
+    if(lat_lng_list)
+    {
+	drawMapPolyline(lat_lng_list);
+    }
+    search_polygon(search_query, str_bounds, lat_lng_list);
 }
 
 function search_polygon(terms, bounds, polygon)
 {
-
     var accessor = {
         consumerSecret: auth.consumerSecret,
         tokenSecret: auth.accessTokenSecret
         };
 
-    url = 'http://api.yifan.dev.yelp.com/search?terms='+terms+"&ywsid=O6gR4bOEampWArBU1zBq9w";
-    url+= "&device_type=x86_64&device=&app_version=3.0.0&device_id=location=san francisco";
-    url+=bounds;
-    url = encodeURI(url)
+    parameters = [];
+    parameters.push(['term', terms]);
+    parameters.push(['bounds', bounds]);
+    parameters.push(['callback', 'cb']);
+    parameters.push(['oauth_consumer_key', auth.consumerKey]);
+    parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
+    parameters.push(['oauth_token', auth.accessToken]);
+    parameters.push(['oauth_signature_method', 'HMAC-SHA1']);
+
+    var message = { 
+	'action': 'http://api.yelp.com/v2/search',
+	'method': 'GET',
+	'parameters': parameters 
+    };
+
+    OAuth.setTimestampAndNonce(message);
+    OAuth.SignatureMethod.sign(message, accessor);
+
+    var parameterMap = OAuth.getParameterMap(message.parameters);
+    parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature);
+
+    //url = 'http://api.yelp.com/v2/search?terms='+terms;
+    //url+=bounds;
+    //url = encodeURI(url)
+
     $('#loadingDiv').show();
     $.ajax({
-        type:'POST',
-        url:url,
-        crossDomain:true,
-        data: {'polygon': polygon},
-        dataType: 'json',
+        'url':message.action,
+	'data': parameterMap,
+	'cache': true,
+        'dataType': 'jsonp',
+	'jsonpCallback': 'cb',
         success: function(data, status, request) {
             $('#loadingDiv').hide();
             biz_lat_lng_list = new Array();
+	    alert(data.businesses.length);
+	    var location_available = 0
             for(var i=0;i<data.businesses.length;i++)
             {
                 biz = data.businesses[i];
-                //alert(biz.name+' '+biz.image_url+' '+biz.rating_img_url);
-                biz_lat_lng = new google.maps.LatLng(biz.latitude, biz.longitude);
-                drawMarker(biz_lat_lng);
-                biz_lat_lng_list.push(biz_lat_lng);
-            }
-        },
+		var address_key = biz.location.display_address.join() + ' location';
+		if(localStorage[address_key])
+		{
+		    var location = localStorage[address_key].replace('(', '[').replace(')', ']');
+		    location = eval(location);
+		    var glocation = new google.maps.LatLng(location[0], location[1]);
+		    var location_point = [glocation.lat(), glocation.lng()];
+		    if(is_location_in_polygon(location_point, polygon) && true)
+		    {
+			drawMarker(glocation);
+			biz_lat_lng_list.push(glocation);
+		    }
+		}
+		else
+		{
+		    var get_geocode_func = function(address_key){
+			geocoder.geocode( { 'address': biz.location.display_address.join()}, function(results, status){
+				if (status == google.maps.GeocoderStatus.OK) {
+				    localStorage[address_key] = results[0].geometry.location;
+				    var location_point = [results[0].geometry.location.lat(), results[0].geometry.location.lng()];
+				    if(is_location_in_polygon(location_point, polygon) && true)
+				    {
+					drawMarker(results[0].geometry.location);
+					biz_lat_lng_list.push(results[0].geometry.location);
+				    }
+				    
+				} else {
+				    alert("Geocode was not successful for the following reason: " + status);
+				}
+			    });
+		    }
+		    get_geocode_func(address_key);
+		}
+	    }
+	},
         error: function (xhr, ajaxOptions, thrownError) {
             $('#loadingDiv').hide();
-            alert("Oops...can't get any result.")
+            alert("Oops...can't get any result:"+ String(xhr.status));
       }
     }
     );
